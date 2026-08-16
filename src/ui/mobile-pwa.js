@@ -1,4 +1,4 @@
-/* YaKyoLife mobile/PWA experience layer v4. */
+/* YaKyoLife mobile/PWA experience layer v5. Presentation only. */
 const $=id=>document.getElementById(id);
 const phone=matchMedia('(max-width: 920px)');
 const prefersReduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -44,7 +44,7 @@ const kindRules=[
   ['love',/戀|愛|感情|約會|求婚|婚|老婆|女友|緋聞|外遇|孩子|新生命/],
   ['contract',/合約|FA|自由市場|旅日|旅美|大聯盟|日職|中職|球團|交易|選秀|下放|戰力外|續約|薪資|新東家/],
   ['intl',/國際賽|WBC|世界棒球經典賽|12強|P12|亞錦|國家隊|Team Taiwan/],
-  ['honor',/MVP|新人王|金手套|守備聖經|冠軍|日本一|世界大賽|名人堂|全明星|獎項|王$|打擊王|全壘打王|盜壘王/],
+  ['honor',/MVP|新人王|金手套|守備聖經|冠軍|日本一|世界大賽|名人堂|全明星|獎項|打擊王|全壘打王|盜壘王/],
   ['training',/訓練|特訓|重量|影像|打擊機|守備千球|跑壘|長傳|教練|指點|伙食|睡眠|低潮|宵夜/]
 ];
 const kindLabel={general:'事件',training:'訓練',injury:'傷病',love:'感情',contract:'生涯',intl:'國際賽',honor:'榮譽'};
@@ -60,25 +60,45 @@ function ensureActionHead(act){
 }
 function syncActionToggle(){
   const btn=document.querySelector('.mah-toggle');if(!btn)return;
-  btn.textContent=document.body.classList.contains('action-collapsed')?'展開選項':'收起看紀錄';
-  btn.setAttribute('aria-expanded',String(!document.body.classList.contains('action-collapsed')));
+  const collapsed=document.body.classList.contains('action-collapsed');
+  btn.textContent=collapsed?'展開選項':'收起看紀錄';btn.setAttribute('aria-expanded',String(!collapsed));
 }
+function revealLatestCard(){
+  if(!phone.matches)return;
+  const cards=[...document.querySelectorAll('#log .yr-block:not(.collapsed) .card')];
+  const card=cards.at(-1);const dock=$('act');const board=$('board');if(!card||!dock)return;
+  requestAnimationFrame(()=>{
+    const r=card.getBoundingClientRect();const dockH=dock.getBoundingClientRect().height;const boardH=board?.getBoundingClientRect().height||0;
+    const topSafe=boardH+10,bottomSafe=innerHeight-dockH-12;
+    if(r.bottom>bottomSafe)scrollBy(0,r.bottom-bottomSafe);
+    else if(r.top<topSafe)scrollBy(0,r.top-topSafe);
+  });
+}
+let actionSignature='';
 function syncActions(){
   const act=$('act');if(!act)return;
   const allocOpen=$('alloc-full')?.classList.contains('show');
   const buttons=[...act.querySelectorAll(':scope > .btn, :scope > .row2 .btn')];
   const has=!allocOpen&&!!act.innerHTML.trim()&&buttons.length>0&&act.style.display!=='none';
-  document.body.classList.toggle('has-mobile-action',phone.matches&&has);
-  document.body.classList.toggle('mobile-event-open',phone.matches&&has);
+
+  if(!phone.matches){
+    document.body.classList.remove('has-mobile-action','mobile-event-open','action-collapsed','major-choice-open');
+    act.querySelector(':scope > .mobile-action-head')?.remove();delete act.dataset.kind;delete act.dataset.count;actionSignature='';return;
+  }
+  document.body.classList.toggle('has-mobile-action',has);document.body.classList.toggle('mobile-event-open',has);
   document.body.classList.remove('choice-sheet-open','quick-action-open');
-  if(!has){document.body.classList.remove('action-collapsed','major-choice-open');return;}
+  if(!has){document.body.classList.remove('action-collapsed','major-choice-open');actionSignature='';return;}
+
   const title=act.querySelector(':scope > .title')?.textContent||'';
   const text=(title+' '+buttons.map(b=>b.textContent||'').join(' ')).replace(/\s+/g,' ').trim();
-  const kind=classify(text);act.dataset.kind=kind;
+  const sig=title+'|'+buttons.map(b=>b.textContent||'').join('|');
+  const isNew=sig!==actionSignature;actionSignature=sig;
+  if(isNew)document.body.classList.remove('action-collapsed');
+  const kind=classify(text);act.dataset.kind=kind;act.dataset.count=String(buttons.length);
   const head=ensureActionHead(act);head.querySelector('.mah-label').textContent=kindLabel[kind]||'事件';
   const major=/高中.*十字路口|選秀|旅日|旅美|自由市場|求婚|婚禮|交易|戰力外|TJ|引退|新東家|去向/.test(text);
-  document.body.classList.toggle('major-choice-open',major);
-  syncActionToggle();
+  document.body.classList.toggle('major-choice-open',major);syncActionToggle();
+  if(isNew)revealLatestCard();
 }
 
 const revealWords=/戀情公開|婚禮|新生命|大傷|小傷|健康回報|升級通知|日職球團|大聯盟球探|自由市場|選秀|年度MVP|新人王|金手套|守備聖經|總冠軍|日本一|世界大賽|隱藏屬性|引退|名人堂/;
@@ -88,7 +108,6 @@ function decorateCards(root=document){
     if(!card.dataset.storySeen){card.dataset.storySeen='1';if(!prefersReduced.matches&&revealWords.test(card.textContent||''))card.classList.add('story-reveal');}
   });
 }
-
 function summarizeYear(block){
   if(!block||block.dataset.recap==='1')return null;const body=block.querySelector('.yr-body'),head=block.querySelector('.yr-head');if(!body||!head||!body.children.length)return null;
   const cards=[...body.querySelectorAll(':scope > .card')];if(!cards.length)return null;
@@ -105,7 +124,6 @@ function decorateDetail(){
   const board=$('board'),detail=$('bd-detail');if(!board||!detail)return;const open=board.classList.contains('detail-open');document.body.classList.toggle('mobile-detail-open',phone.matches&&open);
   if(!phone.matches||!open)return;if(!detail.querySelector('.mobile-detail-head')){const head=document.createElement('div');head.className='mobile-detail-head';head.innerHTML='<b>生涯資訊</b><button type="button">關閉</button>';head.querySelector('button').onclick=()=>$('bd-more')?.click();detail.prepend(head);}
 }
-
 function setupObservers(){
   ensureMobileHud();const act=$('act');if(act)new MutationObserver(syncActions).observe(act,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['style','disabled']});
   const board=$('board');if(board)new MutationObserver(()=>{syncMobileHud();decorateDetail();}).observe(board,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
@@ -116,6 +134,6 @@ function setupNetworkState(){const paint=()=>document.documentElement.classList.
 async function registerSW(){
   if(!('serviceWorker'in navigator)||!/^https?:$/.test(location.protocol))return;const hadController=!!navigator.serviceWorker.controller;let refreshing=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadController||refreshing)return;refreshing=true;location.reload();});
-  try{const reg=await navigator.serviceWorker.register('./sw.js?v=4',{scope:'./'});await reg.update();if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});}catch(err){console.warn('PWA service worker registration failed',err);}
+  try{const reg=await navigator.serviceWorker.register('./sw.js?v=5',{scope:'./'});await reg.update();if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});}catch(err){console.warn('PWA service worker registration failed',err);}
 }
 document.addEventListener('DOMContentLoaded',()=>{setupInstall();setupObservers();setupNetworkState();registerSW();});

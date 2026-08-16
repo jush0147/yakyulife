@@ -1,6 +1,6 @@
-const CACHE='yakyulife-shell-v4';
+const CACHE='yakyulife-shell-v5';
 const CORE=[
-  './','./index.html','./css/style.css','./css/mobile-pwa.css?v=4','./src/main.js','./src/ui/mobile-pwa.js?v=4','./manifest.webmanifest',
+  './','./index.html','./css/style.css','./css/mobile-pwa.css?v=5','./src/main.js','./src/ui/mobile-pwa.js?v=5','./manifest.webmanifest',
   './assets/app-icon-180.png','./assets/app-icon-192.png','./assets/app-icon-512.png','./assets/favicon-64.png','./assets/wordmark-cream.png','./assets/wordmark-dark.png'
 ];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));});

@@ -40,7 +40,10 @@ const majorWords=/高中.*十字路口|選秀|旅日|旅美|自由市場|合約|
 function decorateActions(){
   const act=$('act'); if(!act)return;
   const text=(act.textContent||'').replace(/\s+/g,' ').trim();
-  act.classList.toggle('major-decision',!!text&&majorWords.test(text));
+  const major=!!text&&majorWords.test(text);
+  act.classList.toggle('major-decision',major);
+  document.body.classList.toggle('major-choice-open',major);
+  if(act.children.length)act.scrollTop=0;
 }
 
 const revealWords=/戀情公開|婚禮|新生命|大傷|小傷|健康回報|升級通知|日職球團|大聯盟球探|自由市場|選秀|年度MVP|新人王|金手套|守備聖經|總冠軍|日本一|世界大賽|隱藏屬性|引退|名人堂/;
@@ -52,11 +55,11 @@ function decorateCards(root=document){
 }
 
 function summarizeYear(block){
-  if(!block||block.dataset.recap==='1')return;
+  if(!block||block.dataset.recap==='1')return null;
   const body=block.querySelector('.yr-body'),head=block.querySelector('.yr-head');
-  if(!body||!head||!body.children.length)return;
+  if(!body||!head||!body.children.length)return null;
   const cards=[...body.querySelectorAll(':scope > .card')];
-  if(!cards.length)return;
+  if(!cards.length)return null;
   const stat=cards.findLast?cards.findLast(c=>/球季數據|年度大賽/.test(c.textContent||'')):[...cards].reverse().find(c=>/球季數據|年度大賽/.test(c.textContent||''));
   const notable=[];
   cards.forEach(c=>{
@@ -66,10 +69,10 @@ function summarizeYear(block){
   });
   const recap=document.createElement('section'); recap.className='season-recap'; recap.setAttribute('aria-label','球季總結');
   const statText=stat?(stat.querySelector('.statline')?.textContent||stat.textContent||'').replace(/\s+/g,' ').trim():'';
-  recap.innerHTML=`<div class="recap-kicker">Season recap</div><h4>${head.textContent.trim()}・球季總結</h4>`+
+  recap.innerHTML=`<div class="recap-kicker">Season recap</div><h4>${escapeHtml(head.textContent.trim())}・球季總結</h4>`+
     (statText?`<div class="recap-line">${escapeHtml(statText.slice(0,210))}</div>`:'')+
     (notable.length?`<div class="recap-tags">${notable.slice(0,6).map(x=>`<span class="recap-tag">${escapeHtml(x)}</span>`).join('')}</div>`:'');
-  body.insertBefore(recap,body.firstChild); block.dataset.recap='1';
+  body.appendChild(recap); block.dataset.recap='1'; return recap;
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
@@ -91,8 +94,15 @@ function setupNetworkState(){
 
 async function registerSW(){
   if(!('serviceWorker'in navigator)||!/^https?:$/.test(location.protocol))return;
+  const hadController=!!navigator.serviceWorker.controller;
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!hadController||refreshing)return;
+    refreshing=true; location.reload();
+  });
   try{
     const reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+    await reg.update();
     if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
   }catch(err){console.warn('PWA service worker registration failed',err);}
 }

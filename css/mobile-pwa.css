@@ -1,0 +1,93 @@
+/* Mobile-first presentation layer. No game-state or seeded RNG changes live here. */
+:root{--tap:48px;--safe-b:env(safe-area-inset-bottom,0px)}
+html{overscroll-behavior-y:none;background:#081510}
+body{min-height:100dvh;-webkit-tap-highlight-color:transparent}
+button,.btn,input,summary{touch-action:manipulation}
+
+/* Install affordance */
+#pwa-install{display:none;width:100%;margin:12px 0 0;min-height:48px}
+#pwa-install.show{display:block}
+#pwa-status{margin-top:8px;text-align:center;font-size:12px;color:var(--dim)}
+
+/* Make consequential choices read like consequential choices. */
+#act.major-decision{padding:14px;border:1px solid color-mix(in srgb,var(--accent) 42%,transparent);border-radius:16px;background:color-mix(in srgb,var(--panel,#0e1b16) 88%,black)}
+#act.major-decision>.title{font-family:"Noto Serif TC",serif;font-weight:900;font-size:18px;line-height:1.45;margin-bottom:12px}
+#act.major-decision .btn{min-height:58px;border-radius:12px;text-align:left;padding:12px 14px}
+#act.major-decision .btn small{display:block;margin-top:5px;line-height:1.35}
+#act.major-decision::before{content:"人生岔路";display:inline-flex;margin:0 0 8px;padding:3px 8px;border:1px solid currentColor;border-radius:999px;color:var(--accent);font-size:10px;font-weight:900;letter-spacing:.12em}
+
+/* Lightweight reveal state for important random outcomes. */
+.card.story-reveal{animation:story-in .42s cubic-bezier(.2,.8,.2,1) both}
+@keyframes story-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+
+/* Year recap injected after a completed season. */
+.season-recap{position:relative;margin:10px 0 14px;padding:14px 14px 13px;border-radius:15px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 8%,transparent),transparent 60%)}
+.season-recap .recap-kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:900}
+.season-recap h4{margin:5px 0 9px;font-size:16px}
+.season-recap .recap-line{font-size:13px;line-height:1.55}
+.season-recap .recap-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.season-recap .recap-tag{font-size:11px;padding:4px 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent)}
+
+/* Mobile app shell */
+@media(max-width:920px){
+  body{padding-bottom:calc(118px + var(--safe-b))}
+  #app{display:block;min-height:100dvh}
+  #tl-side{display:none!important}
+  #mid{width:100%;max-width:none;padding:0}
+  #board{position:sticky;top:0;z-index:30;border-radius:0;padding-top:env(safe-area-inset-top,0px);box-shadow:0 8px 26px rgba(0,0,0,.22)}
+  #bd-top{min-height:54px;padding-left:12px;padding-right:10px}
+  #bd-num{display:none}
+  #bd-name{max-width:42vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:17px}
+  #bd-role{gap:4px}
+  #bd-team{max-width:55vw}
+  #bd-grid{grid-template-columns:repeat(4,minmax(0,1fr)) auto}
+  .bd-cell{min-width:0;padding:8px 4px}
+  .bd-cell b{font-size:18px}
+  .bd-cell span{font-size:9px}
+  #bd-more{min-width:44px}
+  #lamps{display:none}
+  #tl-strip{scroll-snap-type:x proximity;scroll-padding:14px;padding-inline:10px}
+  #tl-strip>*{scroll-snap-align:center}
+  #log{padding:12px 10px 20px}
+  .yr-head{position:sticky;top:103px;z-index:5;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .card{border-radius:14px;padding:14px 13px;margin-bottom:10px}
+  .card h4{font-size:15px;line-height:1.4}
+  #act-side{position:fixed;z-index:60;left:0;right:0;bottom:0;width:auto;max-width:none;padding:0 8px calc(8px + var(--safe-b));pointer-events:none;background:linear-gradient(to top,rgba(8,21,16,.98) 78%,rgba(8,21,16,0))}
+  #act-in{max-width:680px;margin:0 auto;pointer-events:auto}
+  #trait-side{display:none}
+  #act-toggle{min-height:40px;margin:0 auto 5px}
+  #act{max-height:min(50dvh,420px);overflow:auto;overscroll-behavior:contain;padding:8px;border-radius:17px;background:color-mix(in srgb,var(--panel,#0e1b16) 94%,black);box-shadow:0 -10px 34px rgba(0,0,0,.35);border:1px solid color-mix(in srgb,var(--line,#355044) 62%,transparent)}
+  #act>.title{position:sticky;top:-8px;z-index:2;margin:-8px -8px 8px;padding:11px 10px 9px;background:inherit;border-bottom:1px solid color-mix(in srgb,var(--line,#355044) 50%,transparent)}
+  #act .btn{min-height:var(--tap);font-size:15px;margin:6px 0;border-radius:11px;padding:10px 12px}
+  #alloc-full{padding-bottom:var(--safe-b)}
+  #af-inner{border-radius:18px 18px 0 0;max-height:92dvh}
+  #modal{align-items:flex-end;padding:0}
+  #modal-box{width:100%;max-width:none;max-height:88dvh;overflow:auto;border-radius:20px 20px 0 0;padding:18px 14px calc(18px + var(--safe-b))}
+  #start{min-height:100dvh;padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(24px + var(--safe-b))}
+  #start .wrap{max-width:560px}
+  #start .btn,#start input,#start .seg button{min-height:48px}
+  #start .seg{gap:7px}
+  #start .seg button{border-radius:11px}
+  #start .player-id-input{gap:8px}
+  #fld-ui{display:none}
+}
+
+@media(max-width:430px){
+  #bd-sal-cell{display:none}
+  #bd-grid{grid-template-columns:repeat(3,minmax(0,1fr)) auto}
+  #bd-team{max-width:48vw}
+  .bd-chip.typ{display:none}
+  .yr-head{top:101px}
+  #log{padding-inline:8px}
+  .card{padding-inline:12px}
+}
+
+@media(display-mode:standalone){
+  #pwa-install{display:none!important}
+  #start{padding-top:calc(12px + env(safe-area-inset-top,0px))}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .card.story-reveal{animation:none}
+  *{scroll-behavior:auto!important}
+}

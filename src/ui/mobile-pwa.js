@@ -1,5 +1,7 @@
-/* Mobile/PWA enhancement layer. Presentation only: never imports or mutates game state. */
+/* YaKyoLife mobile/PWA experience layer.
+   It reads rendered UI only; it never imports or mutates seeded game state. */
 const $=id=>document.getElementById(id);
+const phone=matchMedia('(max-width: 920px)');
 const prefersReduced=matchMedia('(prefers-reduced-motion: reduce)');
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 
@@ -14,18 +16,17 @@ function ensureInstallUI(){
 let installPrompt=null;
 window.addEventListener('beforeinstallprompt',ev=>{
   ev.preventDefault(); installPrompt=ev; ensureInstallUI();
-  const b=$('pwa-install'); if(b)b.classList.add('show');
+  $('pwa-install')?.classList.add('show');
 });
 window.addEventListener('appinstalled',()=>{
-  installPrompt=null; const b=$('pwa-install'); if(b)b.classList.remove('show');
+  installPrompt=null; $('pwa-install')?.classList.remove('show');
   const s=$('pwa-status'); if(s)s.textContent='安裝完成，可以從主畫面直接開啟。';
 });
-
 function setupInstall(){
   ensureInstallUI(); const b=$('pwa-install'),s=$('pwa-status'); if(!b)return;
   const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
   if(standalone()){b.classList.remove('show');return;}
-  if(ios){ b.classList.add('show'); b.textContent='加入 iPhone 主畫面'; }
+  if(ios){b.classList.add('show');b.textContent='加入 iPhone 主畫面';}
   b.onclick=async()=>{
     if(installPrompt){
       installPrompt.prompt(); const choice=await installPrompt.userChoice; installPrompt=null;
@@ -36,14 +37,52 @@ function setupInstall(){
   };
 }
 
+function phaseText(){
+  const on=document.querySelector('#lamps .lamp.on');
+  return (on?.textContent||'').replace(/\s+/g,' ').trim()||'生涯';
+}
+function roleText(){
+  return ($('bd-role')?.querySelector('.bd-chip.pos')?.textContent||'').trim();
+}
+function syncMobileHud(){
+  if(!phone.matches)return;
+  const meta=$('mobile-meta'); if(!meta)return;
+  const y=$('bd-year')?.textContent?.trim()||'';
+  const age=$('bd-age')?.textContent?.trim()||'';
+  const ovr=$('bd-ovr')?.textContent?.trim()||'';
+  const role=roleText();
+  const vals={
+    'mm-season':`${y}${age?` · ${age}歲`:''}`,
+    'mm-ovr':ovr?`OVR ${ovr}`:'',
+    'mm-role':role,
+    'mm-phase':phaseText()
+  };
+  Object.entries(vals).forEach(([id,text])=>{const el=$(id);if(el&&el.textContent!==text)el.textContent=text;});
+}
+function ensureMobileHud(){
+  const board=$('board'); if(!board||$('mobile-meta'))return;
+  const meta=document.createElement('div'); meta.id='mobile-meta';
+  meta.innerHTML='<span id="mm-season" class="mm-pill"></span><span id="mm-ovr" class="mm-pill"></span><span id="mm-role" class="mm-pill"></span><span id="mm-phase" class="mm-pill mm-phase"></span><button id="mobile-career" type="button">生涯</button>';
+  const top=$('bd-top'); top?.insertAdjacentElement('afterend',meta);
+  $('mobile-career').onclick=()=>$('bd-more')?.click();
+  syncMobileHud();
+}
+
 const majorWords=/高中.*十字路口|選秀|旅日|旅美|自由市場|合約|求婚|婚禮|交易|下放|戰力外|TJ|Tommy John|引退|落葉歸根|新東家|去向|球團徵詢/;
-function decorateActions(){
+function syncActions(){
   const act=$('act'); if(!act)return;
+  const buttons=[...act.querySelectorAll(':scope > .btn, :scope > .row2 .btn')].filter(b=>!b.disabled||b.offsetParent!==null);
+  const allocOpen=$('alloc-full')?.classList.contains('show');
+  const has=!allocOpen&&!!act.innerHTML.trim()&&buttons.length>0&&act.style.display!=='none';
   const text=(act.textContent||'').replace(/\s+/g,' ').trim();
-  const major=!!text&&majorWords.test(text);
+  const major=has&&majorWords.test(text);
+  const sheet=has&&(major||buttons.length>1);
+  document.body.classList.toggle('has-mobile-action',phone.matches&&has);
+  document.body.classList.toggle('quick-action-open',phone.matches&&has&&!sheet);
+  document.body.classList.toggle('choice-sheet-open',phone.matches&&sheet);
+  document.body.classList.toggle('major-choice-open',phone.matches&&major);
   act.classList.toggle('major-decision',major);
-  document.body.classList.toggle('major-choice-open',major);
-  if(act.children.length)act.scrollTop=0;
+  if(has)act.scrollTop=0;
 }
 
 const revealWords=/戀情公開|婚禮|新生命|大傷|小傷|健康回報|升級通知|日職球團|大聯盟球探|自由市場|選秀|年度MVP|新人王|金手套|守備聖經|總冠軍|日本一|世界大賽|隱藏屬性|引退|名人堂/;
@@ -58,8 +97,7 @@ function summarizeYear(block){
   if(!block||block.dataset.recap==='1')return null;
   const body=block.querySelector('.yr-body'),head=block.querySelector('.yr-head');
   if(!body||!head||!body.children.length)return null;
-  const cards=[...body.querySelectorAll(':scope > .card')];
-  if(!cards.length)return null;
+  const cards=[...body.querySelectorAll(':scope > .card')]; if(!cards.length)return null;
   const stat=cards.findLast?cards.findLast(c=>/球季數據|年度大賽/.test(c.textContent||'')):[...cards].reverse().find(c=>/球季數據|年度大賽/.test(c.textContent||''));
   const notable=[];
   cards.forEach(c=>{
@@ -70,40 +108,55 @@ function summarizeYear(block){
   const recap=document.createElement('section'); recap.className='season-recap'; recap.setAttribute('aria-label','球季總結');
   const statText=stat?(stat.querySelector('.statline')?.textContent||stat.textContent||'').replace(/\s+/g,' ').trim():'';
   recap.innerHTML=`<div class="recap-kicker">Season recap</div><h4>${escapeHtml(head.textContent.trim())}・球季總結</h4>`+
-    (statText?`<div class="recap-line">${escapeHtml(statText.slice(0,210))}</div>`:'')+
-    (notable.length?`<div class="recap-tags">${notable.slice(0,6).map(x=>`<span class="recap-tag">${escapeHtml(x)}</span>`).join('')}</div>`:'');
-  body.appendChild(recap); block.dataset.recap='1'; return recap;
+    (statText?`<div class="recap-line">${escapeHtml(statText.slice(0,240))}</div>`:'')+
+    (notable.length?`<div class="recap-tags">${notable.slice(0,7).map(x=>`<span class="recap-tag">${escapeHtml(x)}</span>`).join('')}</div>`:'');
+  body.appendChild(recap); block.dataset.recap='1';
+  if(phone.matches)requestAnimationFrame(()=>recap.scrollIntoView({block:'nearest'}));
+  return recap;
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
+function decorateDetail(){
+  const board=$('board'),detail=$('bd-detail'); if(!board||!detail)return;
+  const open=board.classList.contains('detail-open');
+  document.body.classList.toggle('mobile-detail-open',phone.matches&&open);
+  if(!phone.matches||!open)return;
+  if(!detail.querySelector('.mobile-detail-head')){
+    const head=document.createElement('div'); head.className='mobile-detail-head';
+    head.innerHTML='<b>生涯資訊</b><button type="button">關閉</button>';
+    head.querySelector('button').onclick=()=>$('bd-more')?.click();
+    detail.prepend(head);
+  }
+}
+
 function setupObservers(){
-  const act=$('act'); if(act)new MutationObserver(decorateActions).observe(act,{childList:true,subtree:true,characterData:true});
+  ensureMobileHud();
+  const act=$('act'); if(act)new MutationObserver(syncActions).observe(act,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['style','disabled']});
+  const board=$('board'); if(board)new MutationObserver(()=>{syncMobileHud();decorateDetail();}).observe(board,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
   const log=$('log'); if(log)new MutationObserver(records=>{
     decorateCards(log);
     let newYear=false;
     records.forEach(r=>r.addedNodes.forEach(n=>{if(n.nodeType===1&&n.classList?.contains('yr-block'))newYear=true;}));
-    if(newYear){ const years=[...log.querySelectorAll('.yr-block')]; if(years.length>1)summarizeYear(years[years.length-2]); }
+    if(newYear){const years=[...log.querySelectorAll('.yr-block')];if(years.length>1)summarizeYear(years[years.length-2]);}
   }).observe(log,{childList:true,subtree:true});
-  decorateActions(); decorateCards();
+  phone.addEventListener?.('change',()=>{syncActions();syncMobileHud();decorateDetail();});
+  syncActions(); syncMobileHud(); decorateCards(); decorateDetail();
 }
 
 function setupNetworkState(){
   const paint=()=>document.documentElement.classList.toggle('offline',!navigator.onLine);
-  addEventListener('online',paint); addEventListener('offline',paint); paint();
+  addEventListener('online',paint);addEventListener('offline',paint);paint();
 }
 
 async function registerSW(){
   if(!('serviceWorker'in navigator)||!/^https?:$/.test(location.protocol))return;
-  const hadController=!!navigator.serviceWorker.controller;
-  let refreshing=false;
+  const hadController=!!navigator.serviceWorker.controller; let refreshing=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    if(!hadController||refreshing)return;
-    refreshing=true; location.reload();
+    if(!hadController||refreshing)return; refreshing=true; location.reload();
   });
   try{
-    const reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
-    await reg.update();
-    if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+    const reg=await navigator.serviceWorker.register('./sw.js?v=3',{scope:'./'});
+    await reg.update(); if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
   }catch(err){console.warn('PWA service worker registration failed',err);}
 }
 

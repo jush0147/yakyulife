@@ -1,6 +1,6 @@
-const CACHE='yakyulife-shell-v2';
+const CACHE='yakyulife-shell-v3';
 const CORE=[
-  './','./index.html','./css/style.css','./css/mobile-pwa.css?v=2','./src/main.js','./src/ui/mobile-pwa.js?v=2','./manifest.webmanifest',
+  './','./index.html','./css/style.css','./css/mobile-pwa.css?v=3','./src/main.js','./src/ui/mobile-pwa.js?v=3','./manifest.webmanifest',
   './assets/app-icon-180.png','./assets/app-icon-192.png','./assets/app-icon-512.png','./assets/favicon-64.png','./assets/wordmark-cream.png','./assets/wordmark-dark.png'
 ];
 self.addEventListener('install',event=>{
@@ -11,16 +11,18 @@ self.addEventListener('activate',event=>{
 });
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('fetch',event=>{
-  const req=event.request;
-  if(req.method!=='GET')return;
-  const url=new URL(req.url);
-  if(url.origin!==location.origin)return;
-  const mutable=req.mode==='navigate'||/\.(?:html|css|js|webmanifest)$/.test(url.pathname);
-  if(mutable){
+  const req=event.request;if(req.method!=='GET')return;
+  const url=new URL(req.url);if(url.origin!==location.origin)return;
+  const networkFirst=req.mode==='navigate'||['document','script','style'].includes(req.destination)||/\.(?:js|css|html)$/.test(url.pathname);
+  if(networkFirst){
     event.respondWith(fetch(req).then(res=>{
       if(res&&res.status===200){const copy=res.clone();caches.open(CACHE).then(c=>c.put(req,copy));}
       return res;
-    }).catch(()=>caches.match(req).then(hit=>hit||caches.match('./index.html'))));
+    }).catch(async()=>{
+      const hit=await caches.match(req);if(hit)return hit;
+      if(req.mode==='navigate')return caches.match('./index.html');
+      return Response.error();
+    }));
     return;
   }
   event.respondWith(caches.match(req).then(hit=>hit||fetch(req).then(res=>{

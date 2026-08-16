@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="YaKyoLife - 棒球人生模擬器">
-<meta name="application-name" content="YaKyoLife">
 <title>YaKyoLife - 棒球人生模擬器</title>
 <meta name="description" content="從高中三大賽到名人堂，一場種子化的台灣棒球員生涯模擬。選秀、旅外、國際賽、傷病、感情、引退——每一個決定都算數。">
 <link rel="canonical" href="https://www.yakyolife.com/">
@@ -26,14 +25,14 @@
 <meta name="twitter:title" content="YaKyoLife - 棒球人生模擬器">
 <meta name="twitter:description" content="從高中三大賽到名人堂，一場種子化的台灣棒球員生涯模擬。選秀、旅外、國際賽、傷病、感情、引退——每一個決定都算數。">
 <meta name="twitter:image" content="https://www.yakyolife.com/og.png">
+<!-- favicon: bare full-bleed ball (owner request; matches the pre-logo-system tab icon).
+     The dark-bg 3c app icon stays on apple-touch-icon and the PWA manifest. -->
 <link rel="icon" type="image/png" href="assets/favicon-64.png">
 <link rel="apple-touch-icon" href="assets/app-icon-180.png">
-<link rel="manifest" href="manifest.webmanifest">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=IBM+Plex+Mono:wght@500;700&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/mobile-pwa.css?v=2">
 </head>
 <body>
 <div id="start">
@@ -55,6 +54,9 @@
         <button data-v="IF">內野手</button><button data-v="OF">外野手</button>
       </div></div>
     <button class="btn main" style="margin-top:28px" id="btn-start">開始生涯 ▸ 高一春天</button>
+    <!-- Display preferences sit apart from the career choices above and are collapsed by
+         default: none of them affect the run, and all three are also reachable from the
+         in-game menu. Native <details> so keyboard and screen-reader behaviour come free. -->
     <details id="fld-display">
       <summary>顯示設定<span class="sum" id="disp-sum"></span></summary>
       <div id="disp-body">
@@ -78,6 +80,7 @@
       · <a href="#" id="seed-re">換一個</a><br>相同種子＋相同選擇＝相同人生（可直接輸入朋友的種子碼）</p>
     <div id="community"><a href="https://discord.gg/UnDYxFtz4U" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">💬</span>加入 Discord 社群</a></div>
     <footer style="text-align:center;margin-top:22px;color:var(--dim);font-size:12px">Produced by <a href="https://www.threads.com/@mr.themost" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">最先生 Mr.TheMost</a></footer>
+    <!-- version lives in the quiet bottom info band, mirroring the in-game sidebar's SEED+version group -->
     <div id="ver-badge" style="text-align:center;margin-top:6px;font-size:10px;letter-spacing:1px;color:var(--dim);opacity:.55;font-family:monospace">v1.4.7</div>
   </div>
 </div>
@@ -108,10 +111,16 @@
         <span class="lamp" id="lp1"><i></i>賽季中</span>
         <span class="lamp" id="lp2"><i></i>季末</span>
       </div>
+      <!-- compact bar only: a hint that the whole bar opens the detail panel, not a control
+           of its own (the tap target is the bar; #bd-more stays for keyboard and AT).
+           It sits directly under the two rows it belongs to and above the year strip, which
+           is separate navigation and is deliberately outside the bar's tap area. -->
       <div id="bd-hint" aria-hidden="true"><i class="chev"></i></div>
       <div id="tl-strip"></div>
     </header>
     <main id="log"></main>
+    <!-- mobile-only brand sign-off (compact container): the log's tail is the one spot the
+         auto-scroll keeps on screen, so the lockup sits there, above the action strip -->
     <div id="log-mark" aria-hidden="true"><img class="wm-img" src="assets/wordmark-cream.png" alt="" decoding="async"><span class="sub">棒球人生模擬器</span><span class="ver" id="lm-ver"></span></div>
   </div>
   <aside id="act-side"><div id="act-in">
@@ -123,6 +132,5 @@
 <div id="modal"><div id="modal-box"></div></div>
 <div id="alloc-full"><div id="af-inner"><div class="af-head"><span class="af-title" id="af-title"></span><button class="btn" id="af-close">收起</button></div><div id="af-body"></div></div></div>
 <script type="module" src="src/main.js"></script>
-<script type="module" src="src/ui/mobile-pwa.js?v=2"></script>
 </body>
 </html>

@@ -7,19 +7,24 @@ import {isMobileLayout} from './prefs.js';
 
 export function allocFullOpen(){ const f=$('alloc-full'); if(f)f.classList.add('show'); }
 export function allocFullClose(){ const f=$('alloc-full'); if(f)f.classList.remove('show'); }
-/* The live allocation, so its nodes can be re-homed when a setting changes mid-way. */
+/* The live allocation, so its nodes can be re-homed when a setting changes mid-way.
+   render() only ever writes into these same three nodes, which is what makes moving
+   them between the panel and the overlay safe. */
 export let ALLOC=null;
 export function setAlloc(v){ ALLOC=v; }
 export function clearAlloc(){ ALLOC=null; }
 export function allocPlace(){
   if(!ALLOC)return;
-  const a=$('act'), full=isMobileLayout();
+  const a=$('act'), full=document.body.classList.contains('big-text')&&isMobileLayout();
   const s=$('act-side'); if(s)s.classList.toggle('alloc',!full);
   if(full){
+    /* move the nodes out of #act before rewriting it, or the rewrite would destroy them */
     const fb=$('af-body');
     fb.appendChild(ALLOC.top); fb.appendChild(ALLOC.rows); fb.appendChild(ALLOC.btm);
     const ft=$('af-title'); if(ft)ft.textContent=ALLOC.label;
     a.innerHTML=`<div class="title">${ALLOC.label}</div><div class="pool" id="al-cue"></div>`;
+    /* both entry points already sit behind an explicit 分配 button, so the overlay opens
+       straight away; this one is only the way back after the player dismisses it */
     const ob=document.createElement('button'); ob.className='btn main'; ob.id='al-open';
     ob.style.textAlign='center'; ob.textContent='繼續分配 ▸'; ob.onclick=allocFullOpen;
     a.appendChild(ob);
@@ -32,7 +37,10 @@ export function allocPlace(){
     allocFullClose();
   }
   ALLOC.render();
-  if(!full)scrollBottom();
+  /* the sticky panel just grew (or moved between panel and overlay), which adds the same
+     amount to scrollHeight; without this the log's tail is left hidden behind the panel —
+     every other event path re-pins the bottom (card()/choose()), this one must too */
+  scrollBottom();
 }
 /* 加點介面：mode {dice:[..]} 或 {pool:n} */
 export function allocUI(mode,label,done){
@@ -42,6 +50,8 @@ export function allocUI(mode,label,done){
   a.innerHTML=`<div class="title">${label}</div><div id="al-top"></div><div id="al-rows"></div><div class="row2" id="al-btm"></div>`;
   const touchedKeys={};
   const top=$('al-top'),rows=$('al-rows'),btm=$('al-btm');
+  /* allocPlace() below decides panel vs overlay from the current settings, and can be
+     called again by applyMobileUI / applyBigText if the player changes them mid-allocation */
   setAlloc({top,rows,btm,label,render});
   function remaining(){ return dice?dice.length-idx:pool; }
   function render(){
@@ -59,21 +69,22 @@ export function allocUI(mode,label,done){
         r.querySelector('.val').innerHTML=`${S.ab[k]} <b style="display:block;font-size:10.5px">${got>0?'+'+got:'蓄力中'}</b>`; render(); board(0); };
       rows.appendChild(r); });
     btm.innerHTML='';
+    /* 復原鈕固定佔位:無可復原時 disabled 而非消失,避免版面跳動誤觸 */
     const u=document.createElement('button'); u.className='btn'; u.style.textAlign='center';
     u.textContent='↩ 復原'; u.disabled=!hist.length;
     u.style.opacity=hist.length?'1':'0.35'; u.style.cursor=hist.length?'pointer':'default';
     if(hist.length)u.onclick=()=>{ const [k,got,pc]=hist.pop(); S.ab[k]-=got; if(S.carry)S.carry[k]=pc; if(dice)idx--; else pool++; render(); board(0); };
     btm.appendChild(u);
-    const allCap=keys.every(k=>S.ab[k]>=80), ready=remaining()===0||allCap;
-    const c=document.createElement('button'); c.className='btn main'; c.disabled=!ready;
-    if(ready)c.textContent=(remaining()>0&&allCap)?'能力已達上限，捨棄剩餘骰子 ▸':'確認並繼續 ▸';
-    else c.textContent=`剩 ${remaining()} ${dice?'顆骰子':'點'} · 分配完即可繼續`;
-    if(ready)c.onclick=()=>{ actClear(); allocDone(touchedKeys,dice?true:false); done(); };
-    btm.appendChild(c);
+    const allCap=keys.every(k=>S.ab[k]>=80);
+    if(remaining()===0||allCap){ const c=document.createElement('button'); c.className='btn main';
+      c.textContent=(remaining()>0&&allCap)?'能力已達上限，捨棄剩餘骰子 ▸':'確認 ▸';
+      c.onclick=()=>{ actClear(); allocDone(touchedKeys,dice?true:false); done(); }; btm.appendChild(c); }
     actToggleSync();
   }
   allocPlace();
-  /* Roll-in animation is visual only; game values remain the seeded dice[]. */
+  /* Roll-in animation on first render only; purely visual (Math.random, not the
+     seeded RNG) — game values always come from dice[]. Scoped to `top` rather than #act
+     because in the overlay form the dice live in #af-body, where #act cannot see them. */
   if(dice && !matchMedia('(prefers-reduced-motion: reduce)').matches){
     top.querySelectorAll('#dice .die').forEach((el,i)=>{
       el.classList.add('rolling');
